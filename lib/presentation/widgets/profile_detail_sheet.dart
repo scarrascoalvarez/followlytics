@@ -88,11 +88,11 @@ class ProfileDetailSheet extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                '@${profile.username}',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+          Text(
+            '@${profile.username}',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(width: 8),
               IconButton(
@@ -581,7 +581,9 @@ class _InteractionDetailSheetState extends State<InteractionDetailSheet>
               ),
               const SizedBox(height: 8),
               Text(
-                comment.content.isNotEmpty ? comment.content : '(Comentario vacío)',
+                comment.content.isNotEmpty 
+                    ? InstagramTextDecoder.decode(comment.content) 
+                    : '(Comentario vacío)',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
