@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:intl/intl.dart';
 
 class DateFormatter {
@@ -44,6 +45,22 @@ class DateFormatter {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
     final now = DateTime.now();
     return now.difference(date).inDays > days;
+  }
+}
+
+/// Utility to decode Instagram's mojibake text (emojis stored as Latin-1 interpreted UTF-8)
+class InstagramTextDecoder {
+  /// Decodes text from Instagram JSON that has emojis incorrectly encoded
+  /// Instagram exports emojis as UTF-8 bytes interpreted as Latin-1 characters
+  static String decode(String input) {
+    try {
+      // Convert each character to its Latin-1 byte value, then decode as UTF-8
+      final bytes = input.codeUnits.map((c) => c & 0xFF).toList();
+      return utf8.decode(bytes, allowMalformed: true);
+    } catch (e) {
+      // If decoding fails, return original string
+      return input;
+    }
   }
 }
 

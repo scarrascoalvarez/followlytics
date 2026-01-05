@@ -10,6 +10,7 @@ import '../blocs/analytics/analytics_bloc.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/profile_tile.dart';
 import '../widgets/profile_detail_sheet.dart';
+import '../widgets/data_options_sheet.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -109,12 +110,14 @@ class DashboardPage extends StatelessWidget {
   void _showInteractionDetail(
     BuildContext context,
     UserInteractionScore user,
+    UserInteractionDetails? details,
     bool isFollower,
     bool isFollowing,
   ) {
     showInteractionDetailSheet(
       context,
       user: user,
+      details: details,
       isFollower: isFollower,
       isFollowing: isFollowing,
     );
@@ -139,6 +142,7 @@ class DashboardPage extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
+                    fontSize: 20,
                   ),
             ),
           ),
@@ -155,32 +159,45 @@ class DashboardPage extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              // Last update info
+              // Last update info (clickable)
               if (state.instagramData != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.update,
-                        size: 14,
-                        color: AppColors.textTertiary,
+                GestureDetector(
+                  onTap: () => showDataOptionsSheet(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceVariant,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.border,
+                        width: 0.5,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Actualizado ${DateFormatter.formatTimestampRelative(
-                          state.instagramData!.importedAt.millisecondsSinceEpoch ~/ 1000,
-                        )}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textTertiary,
-                            ),
-                      ),
-                    ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.update,
+                          size: 14,
+                          color: AppColors.textTertiary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Actualizado ${DateFormatter.formatTimestampRelative(
+                            state.instagramData!.importedAt.millisecondsSinceEpoch ~/ 1000,
+                          )}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.textTertiary,
+                              ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 16,
+                          color: AppColors.textTertiary,
+                        ),
+                      ],
+                    ),
                   ),
                 ).animate().fadeIn(duration: 300.ms),
 
@@ -314,6 +331,7 @@ class DashboardPage extends StatelessWidget {
                               .toSet() ?? {};
                           final isFollower = followerUsernames.contains(user.username.toLowerCase());
                           final isFollowing = followingUsernames.contains(user.username.toLowerCase());
+                          final details = state.interactionAnalytics!.userDetails[user.username];
                           
                           return InteractionProfileTile(
                             username: user.username,
@@ -323,7 +341,7 @@ class DashboardPage extends StatelessWidget {
                             totalScore: user.totalScore,
                             isFollower: isFollower,
                             isFollowing: isFollowing,
-                            onTap: () => _showInteractionDetail(context, user, isFollower, isFollowing),
+                            onTap: () => _showInteractionDetail(context, user, details, isFollower, isFollowing),
                           );
                         })
                         .toList(),

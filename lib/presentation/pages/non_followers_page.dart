@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/di/injection_container.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/services/reviewed_profiles_service.dart';
 import '../blocs/analytics/analytics_bloc.dart';
-import '../widgets/profile_tile.dart';
+import '../widgets/swipeable_profile_tile.dart';
 
 class NonFollowersPage extends StatefulWidget {
   const NonFollowersPage({super.key});
@@ -15,6 +17,25 @@ class NonFollowersPage extends StatefulWidget {
 
 class _NonFollowersPageState extends State<NonFollowersPage> {
   String _searchQuery = '';
+  bool _hideReviewed = false;
+  int _reviewedCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateReviewedCount();
+  }
+
+  void _updateReviewedCount() {
+    final state = context.read<AnalyticsBloc>().state;
+    final nonFollowers = state.followAnalytics?.nonFollowers ?? [];
+    final reviewedService = sl<ReviewedProfilesService>();
+    setState(() {
+      _reviewedCount = nonFollowers
+          .where((p) => reviewedService.isReviewed(p.username))
+          .length;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,15 +48,36 @@ class _NonFollowersPageState extends State<NonFollowersPage> {
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => context.go('/'),
         ),
+        actions: [
+          IconButton(
+            onPressed: () => setState(() => _hideReviewed = !_hideReviewed),
+            tooltip: _hideReviewed ? 'Mostrar todos' : 'Ocultar revisados',
+            icon: Icon(
+              _hideReviewed ? Icons.visibility : Icons.visibility_off,
+              size: 22,
+              color: _hideReviewed ? AppColors.success : AppColors.textSecondary,
+            ),
+          ),
+        ],
       ),
       body: BlocBuilder<AnalyticsBloc, AnalyticsState>(
         builder: (context, state) {
+          final reviewedService = sl<ReviewedProfilesService>();
           final nonFollowers = state.followAnalytics?.nonFollowers ?? [];
-          final filtered = nonFollowers
+          
+          var filtered = nonFollowers
               .where((p) => p.username
                   .toLowerCase()
                   .contains(_searchQuery.toLowerCase()))
               .toList();
+
+          if (_hideReviewed) {
+            filtered = filtered
+                .where((p) => !reviewedService.isReviewed(p.username))
+                .toList();
+          }
+
+          final pendingCount = nonFollowers.length - _reviewedCount;
 
           return Column(
             children: [
@@ -75,16 +117,45 @@ class _NonFollowersPageState extends State<NonFollowersPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  '${nonFollowers.length} usuarios',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w600),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '${nonFollowers.length} usuarios',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(fontWeight: FontWeight.w600),
+                                    ),
+                                    if (_reviewedCount > 0) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.success.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          '$_reviewedCount ✓',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall
+                                              ?.copyWith(
+                                                color: AppColors.success,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Personas que sigues pero no te siguen de vuelta',
+                                  pendingCount > 0
+                                      ? '$pendingCount pendientes de revisar'
+                                      : '¡Todos revisados!',
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
@@ -92,6 +163,36 @@ class _NonFollowersPageState extends State<NonFollowersPage> {
                                 ),
                               ],
                             ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Swipe hint
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceVariant,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.swipe_left,
+                            size: 16,
+                            color: AppColors.textTertiary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Desliza a la izquierda para marcar como revisado',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.textTertiary,
+                                ),
                           ),
                         ],
                       ),
@@ -122,23 +223,47 @@ class _NonFollowersPageState extends State<NonFollowersPage> {
               Expanded(
                 child: filtered.isEmpty
                     ? Center(
-                        child: Text(
-                          _searchQuery.isEmpty
-                              ? '¡Todos te siguen de vuelta!'
-                              : 'No se encontraron resultados',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: AppColors.textSecondary,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _hideReviewed
+                                  ? Icons.check_circle_outline
+                                  : Icons.celebration,
+                              size: 48,
+                              color: AppColors.success,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _searchQuery.isNotEmpty
+                                  ? 'No se encontraron resultados'
+                                  : _hideReviewed
+                                      ? '¡Todos revisados!'
+                                      : '¡Todos te siguen de vuelta!',
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                            ),
+                            if (_hideReviewed && _reviewedCount > 0) ...[
+                              const SizedBox(height: 12),
+                              TextButton(
+                                onPressed: () =>
+                                    setState(() => _hideReviewed = false),
+                                child: const Text('Mostrar revisados'),
                               ),
+                            ],
+                          ],
                         ),
                       )
                     : ListView.builder(
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final profile = filtered[index];
-                          return ProfileTile(
+                          return SwipeableProfileTile(
                             profile: profile,
                             isFollower: false,
                             isFollowing: true,
+                            onReviewed: _updateReviewedCount,
                           );
                         },
                       ),

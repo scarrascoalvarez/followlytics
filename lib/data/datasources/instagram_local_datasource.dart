@@ -113,11 +113,23 @@ class InstagramLocalDataSourceImpl implements InstagramLocalDataSource {
       (json) => InstagramJsonParser.parseStoryLikes(json as Map<String, dynamic>),
     ) ?? [];
 
-    final comments = await _parseJsonFile<List<Comment>>(
+    final postComments = await _parseJsonFile<List<Comment>>(
       extractDir,
       AppConstants.commentsPath,
       (json) => InstagramJsonParser.parseComments(json as List<dynamic>),
     ) ?? [];
+
+    final reelsComments = await _parseJsonFile<List<Comment>>(
+      extractDir,
+      AppConstants.reelsCommentsPath,
+      (json) => InstagramJsonParser.parseReelsComments(json as Map<String, dynamic>),
+    ) ?? [];
+
+    // Combine all comments
+    final comments = [...postComments, ...reelsComments];
+
+    // Parse DM conversations
+    final dmConversations = await _parseDmConversations(extractDir);
 
     // Cleanup
     await extractDir.delete(recursive: true);
@@ -135,8 +147,48 @@ class InstagramLocalDataSourceImpl implements InstagramLocalDataSource {
       likedComments: likedComments,
       storyLikes: storyLikes,
       comments: comments,
+      dmConversations: dmConversations,
       importedAt: DateTime.now(),
     );
+  }
+
+  Future<List<DmConversation>> _parseDmConversations(Directory extractDir) async {
+    final conversations = <DmConversation>[];
+    
+    try {
+      final inboxDir = Directory('${extractDir.path}/${AppConstants.dmInboxPath}');
+      if (!await inboxDir.exists()) return conversations;
+
+      // List all conversation folders
+      await for (final entity in inboxDir.list()) {
+        if (entity is Directory) {
+          final folderName = entity.path.split('/').last;
+          
+          // Look for message_1.json in each folder
+          final messageFile = File('${entity.path}/message_1.json');
+          if (await messageFile.exists()) {
+            try {
+              final content = await messageFile.readAsString();
+              final json = jsonDecode(content) as Map<String, dynamic>;
+              final conversation = InstagramJsonParser.parseDmConversation(json, folderName);
+              if (conversation != null) {
+                conversations.add(conversation);
+              }
+            } catch (e) {
+              // Skip malformed files
+              continue;
+            }
+          }
+        }
+      }
+      
+      // Sort by message count (most messages first)
+      conversations.sort((a, b) => b.messageCount.compareTo(a.messageCount));
+    } catch (e) {
+      // Return empty list on error
+    }
+    
+    return conversations;
   }
 
   Future<T?> _parseJsonFile<T>(
@@ -209,6 +261,7 @@ class InstagramLocalDataSourceImpl implements InstagramLocalDataSource {
       'likedComments': data.likedComments.map(_likedContentToJson).toList(),
       'storyLikes': data.storyLikes.map(_storyInteractionToJson).toList(),
       'comments': data.comments.map(_commentToJson).toList(),
+      'dmConversations': data.dmConversations.map(_dmConversationToJson).toList(),
       'importedAt': data.importedAt.toIso8601String(),
     };
   }
@@ -227,6 +280,7 @@ class InstagramLocalDataSourceImpl implements InstagramLocalDataSource {
       likedComments: (json['likedComments'] as List).map(_likedContentFromJson).toList(),
       storyLikes: (json['storyLikes'] as List).map(_storyInteractionFromJson).toList(),
       comments: (json['comments'] as List).map(_commentFromJson).toList(),
+      dmConversations: (json['dmConversations'] as List?)?.map(_dmConversationFromJson).toList() ?? [],
       importedAt: DateTime.parse(json['importedAt'] as String),
     );
   }
@@ -279,6 +333,20 @@ class InstagramLocalDataSourceImpl implements InstagramLocalDataSource {
     mediaOwner: json['mediaOwner'] as String,
     content: json['content'] as String,
     timestamp: DateTime.parse(json['timestamp'] as String),
+  );
+
+  Map<String, dynamic> _dmConversationToJson(DmConversation dm) => {
+    'username': dm.username,
+    'messageCount': dm.messageCount,
+    'lastMessageDate': dm.lastMessageDate?.toIso8601String(),
+  };
+
+  DmConversation _dmConversationFromJson(dynamic json) => DmConversation(
+    username: json['username'] as String,
+    messageCount: json['messageCount'] as int,
+    lastMessageDate: json['lastMessageDate'] != null
+        ? DateTime.parse(json['lastMessageDate'] as String)
+        : null,
   );
 }
 

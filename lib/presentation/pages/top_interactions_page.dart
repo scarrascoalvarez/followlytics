@@ -41,16 +41,23 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
       return timestamp.isAfter(startDate);
     }
 
+    // Collect detailed data per user
+    final userLikes = <String, List<LikedContent>>{};
+    final userComments = <String, List<Comment>>{};
+    final userStoryInteractions = <String, List<StoryInteraction>>{};
+
     // Count likes per user (filtered by date)
     final likeCounts = <String, int>{};
     for (final like in data.likedPosts) {
       if (isInPeriod(like.timestamp)) {
         likeCounts[like.author] = (likeCounts[like.author] ?? 0) + 1;
+        userLikes.putIfAbsent(like.author, () => []).add(like);
       }
     }
     for (final like in data.likedComments) {
       if (isInPeriod(like.timestamp)) {
         likeCounts[like.author] = (likeCounts[like.author] ?? 0) + 1;
+        userLikes.putIfAbsent(like.author, () => []).add(like);
       }
     }
 
@@ -60,6 +67,7 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
       if (isInPeriod(comment.timestamp)) {
         commentCounts[comment.mediaOwner] =
             (commentCounts[comment.mediaOwner] ?? 0) + 1;
+        userComments.putIfAbsent(comment.mediaOwner, () => []).add(comment);
       }
     }
 
@@ -69,7 +77,14 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
       if (isInPeriod(storyLike.timestamp)) {
         storyLikeCounts[storyLike.author] =
             (storyLikeCounts[storyLike.author] ?? 0) + 1;
+        userStoryInteractions.putIfAbsent(storyLike.author, () => []).add(storyLike);
       }
+    }
+
+    // Build DM counts map
+    final dmCounts = <String, int>{};
+    for (final dm in data.dmConversations) {
+      dmCounts[dm.username] = dm.messageCount;
     }
 
     // Get all users and calculate combined scores
@@ -77,6 +92,7 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
       ...likeCounts.keys,
       ...commentCounts.keys,
       ...storyLikeCounts.keys,
+      ...dmCounts.keys,
     };
 
     final combinedScores = allUsers.map((username) {
@@ -85,8 +101,30 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
         likesCount: likeCounts[username] ?? 0,
         commentsCount: commentCounts[username] ?? 0,
         storyLikesCount: storyLikeCounts[username] ?? 0,
+        dmCount: dmCounts[username] ?? 0,
       );
     }).toList();
+
+    // Build detailed user interaction map
+    final userDetails = <String, UserInteractionDetails>{};
+    for (final username in allUsers) {
+      final likes = userLikes[username] ?? [];
+      final comments = userComments[username] ?? [];
+      final stories = userStoryInteractions[username] ?? [];
+      
+      // Sort each list by timestamp (most recent first)
+      likes.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      comments.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      stories.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      
+      userDetails[username] = UserInteractionDetails(
+        username: username,
+        comments: comments,
+        dmCount: dmCounts[username] ?? 0,
+        likedPosts: likes,
+        storyInteractions: stories,
+      );
+    }
 
     // Sort by different criteria
     final topLikedUsers = [...combinedScores]
@@ -109,6 +147,7 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
           topStoryInteractions.where((u) => u.storyLikesCount > 0).toList(),
       combinedTopUsers:
           combinedTopUsers.where((u) => u.totalScore > 0).toList(),
+      userDetails: userDetails,
     );
   }
 
@@ -214,24 +253,28 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
                       'interacciones',
                       followerUsernames,
                       followingUsernames,
+                      analytics.userDetails,
                     ),
                     _buildList(
                       analytics.topLikedUsers,
                       'likes',
                       followerUsernames,
                       followingUsernames,
+                      analytics.userDetails,
                     ),
                     _buildList(
                       analytics.topCommentedUsers,
                       'comentarios',
                       followerUsernames,
                       followingUsernames,
+                      analytics.userDetails,
                     ),
                     _buildList(
                       analytics.topStoryInteractions,
                       'stories',
                       followerUsernames,
                       followingUsernames,
+                      analytics.userDetails,
                     ),
                   ],
                 ),
@@ -248,6 +291,7 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
     String metric,
     Set<String> followerUsernames,
     Set<String> followingUsernames,
+    Map<String, UserInteractionDetails> userDetails,
   ) {
     if (users.isEmpty) {
       return Center(
@@ -287,6 +331,7 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
             followerUsernames.contains(user.username.toLowerCase());
         final isFollowing =
             followingUsernames.contains(user.username.toLowerCase());
+        final details = userDetails[user.username];
 
         return InteractionProfileTile(
           username: user.username,
@@ -296,7 +341,7 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
           totalScore: user.totalScore,
           isFollower: isFollower,
           isFollowing: isFollowing,
-          onTap: () => _showDetail(user, isFollower, isFollowing),
+          onTap: () => _showDetail(user, details, isFollower, isFollowing),
         );
       },
     );
@@ -304,12 +349,14 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
 
   void _showDetail(
     UserInteractionScore user,
+    UserInteractionDetails? details,
     bool isFollower,
     bool isFollowing,
   ) {
     showInteractionDetailSheet(
       context,
       user: user,
+      details: details,
       isFollower: isFollower,
       isFollowing: isFollowing,
     );

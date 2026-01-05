@@ -3,6 +3,7 @@ import 'instagram_profile.dart';
 import 'liked_content.dart';
 import 'story_interaction.dart';
 import 'comment.dart';
+import 'dm_conversation.dart';
 
 class InstagramData extends Equatable {
   final List<InstagramProfile> followers;
@@ -17,6 +18,7 @@ class InstagramData extends Equatable {
   final List<LikedContent> likedComments;
   final List<StoryInteraction> storyLikes;
   final List<Comment> comments;
+  final List<DmConversation> dmConversations;
   final DateTime importedAt;
 
   const InstagramData({
@@ -32,6 +34,7 @@ class InstagramData extends Equatable {
     required this.likedComments,
     required this.storyLikes,
     required this.comments,
+    this.dmConversations = const [],
     required this.importedAt,
   });
 
@@ -48,6 +51,7 @@ class InstagramData extends Equatable {
     likedComments: const [],
     storyLikes: const [],
     comments: const [],
+    dmConversations: const [],
     importedAt: DateTime.now(),
   );
 
@@ -68,6 +72,7 @@ class InstagramData extends Equatable {
     likedComments,
     storyLikes,
     comments,
+    dmConversations,
     importedAt,
   ];
 }

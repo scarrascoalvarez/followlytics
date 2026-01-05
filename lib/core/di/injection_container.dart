@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/datasources/instagram_local_datasource.dart';
 import '../../data/repositories/instagram_repository_impl.dart';
+import '../../data/services/reviewed_profiles_service.dart';
 import '../../domain/repositories/instagram_repository.dart';
 import '../../domain/usecases/get_instagram_data_usecase.dart';
 import '../../domain/usecases/import_instagram_data_usecase.dart';
@@ -17,6 +18,11 @@ Future<void> initDependencies() async {
   // External
   final sharedPreferences = await SharedPreferences.getInstance();
   sl.registerLazySingleton<SharedPreferences>(() => sharedPreferences);
+
+  // Services
+  sl.registerLazySingleton<ReviewedProfilesService>(
+    () => ReviewedProfilesService(sl()),
+  );
 
   // Data Sources
   sl.registerLazySingleton<InstagramLocalDataSource>(

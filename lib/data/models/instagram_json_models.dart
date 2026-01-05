@@ -1,6 +1,9 @@
 import '../../domain/entities/entities.dart';
 import '../../core/utils/date_formatter.dart';
 
+// Re-export for convenience
+typedef _Decoder = InstagramTextDecoder;
+
 /// Parser for Instagram JSON export files
 class InstagramJsonParser {
   /// Parse followers_1.json - Array root with string_list_data
@@ -172,8 +175,20 @@ class InstagramJsonParser {
     return interactions;
   }
 
-  /// Parse post_comments_1.json
+  /// Parse post_comments_1.json (array format)
   static List<Comment> parseComments(List<dynamic> json) {
+    return _parseCommentsList(json);
+  }
+
+  /// Parse reels_comments.json (has object root with comments_reels_comments key)
+  static List<Comment> parseReelsComments(Map<String, dynamic> json) {
+    final reelsComments = json['comments_reels_comments'] as List<dynamic>?;
+    if (reelsComments == null) return [];
+    return _parseCommentsList(reelsComments);
+  }
+
+  /// Helper to parse comments from a list
+  static List<Comment> _parseCommentsList(List<dynamic> json) {
     final comments = <Comment>[];
     for (final item in json) {
       final stringMapData = item['string_map_data'] as Map<String, dynamic>?;
@@ -184,9 +199,13 @@ class InstagramJsonParser {
       final timeData = stringMapData['Time'] as Map<String, dynamic>?;
 
       if (ownerData != null) {
+        // Decode content to fix emoji encoding issues
+        final rawContent = commentData?['value'] as String? ?? '';
+        final decodedContent = _Decoder.decode(rawContent);
+        
         comments.add(Comment(
           mediaOwner: ownerData['value'] as String? ?? '',
-          content: commentData?['value'] as String? ?? '',
+          content: decodedContent,
           timestamp: timeData?['timestamp'] != null 
               ? DateFormatter.fromTimestamp(timeData!['timestamp'] as int)
               : DateTime.now(),
@@ -194,6 +213,39 @@ class InstagramJsonParser {
       }
     }
     return comments;
+  }
+
+  /// Parse a single DM conversation message_1.json file
+  /// Returns a tuple of (username, messageCount, lastMessageTimestamp)
+  static DmConversation? parseDmConversation(Map<String, dynamic> json, String folderName) {
+    // Extract username from folder name (format: username_numbers)
+    final underscoreIndex = folderName.lastIndexOf('_');
+    if (underscoreIndex == -1) return null;
+    
+    // Get the part before the last underscore (could be username with underscores)
+    final username = folderName.substring(0, underscoreIndex);
+    if (username.isEmpty) return null;
+
+    final messages = json['messages'] as List<dynamic>?;
+    if (messages == null || messages.isEmpty) return null;
+
+    // Find the most recent message timestamp
+    DateTime? lastMessageDate;
+    for (final msg in messages) {
+      final timestampMs = msg['timestamp_ms'] as int?;
+      if (timestampMs != null) {
+        final msgDate = DateTime.fromMillisecondsSinceEpoch(timestampMs);
+        if (lastMessageDate == null || msgDate.isAfter(lastMessageDate)) {
+          lastMessageDate = msgDate;
+        }
+      }
+    }
+
+    return DmConversation(
+      username: username,
+      messageCount: messages.length,
+      lastMessageDate: lastMessageDate,
+    );
   }
 
   // Helper methods

@@ -94,7 +94,7 @@ class _SplashPageState extends State<SplashPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo with Instagram gradient border
+                // Logo image
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
@@ -108,10 +108,10 @@ class _SplashPageState extends State<SplashPage> {
                       shape: BoxShape.circle,
                       color: AppColors.background,
                     ),
-                    child: const Icon(
-                      Icons.analytics_outlined,
-                      size: 48,
-                      color: AppColors.textPrimary,
+                    padding: const EdgeInsets.all(24),
+                    child: Image.asset(
+                      'assets/images/logo-2.png',
+                      fit: BoxFit.contain,
                     ),
                   ),
                 )

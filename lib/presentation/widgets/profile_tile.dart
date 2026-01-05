@@ -47,7 +47,7 @@ class ProfileTile extends StatelessWidget {
         ),
       ),
       subtitle: _buildSubtitle(context),
-      trailing: trailing ?? _buildDetailButton(),
+      trailing: trailing,
       onTap: () => _showDetail(context),
     );
   }
@@ -103,23 +103,6 @@ class ProfileTile extends StatelessWidget {
     return null;
   }
 
-  Widget _buildDetailButton() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Text(
-        'Ver',
-        style: TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
 }
 
 class InteractionProfileTile extends StatelessWidget {

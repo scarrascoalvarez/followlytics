@@ -82,41 +82,7 @@ class SettingsPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // Privacy section
-          _buildSectionTitle(context, 'Privacidad'),
-          const SizedBox(height: 12),
-          _buildCard(
-            context,
-            children: [
-              _buildInfoTile(
-                context,
-                icon: Icons.phone_android,
-                title: 'Procesamiento local',
-                subtitle: 'Tus datos nunca salen de tu dispositivo',
-                color: AppColors.success,
-              ),
-              _buildDivider(),
-              _buildInfoTile(
-                context,
-                icon: Icons.cloud_off,
-                title: 'Sin servidores',
-                subtitle: 'No almacenamos ni enviamos tus datos',
-                color: AppColors.success,
-              ),
-              _buildDivider(),
-              _buildInfoTile(
-                context,
-                icon: Icons.lock_outline,
-                title: 'Sin login requerido',
-                subtitle: 'No necesitamos tu contraseña de Instagram',
-                color: AppColors.success,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 28),
-
-          // Data section
+          // Data section (first - main actions)
           _buildSectionTitle(context, 'Datos'),
           const SizedBox(height: 12),
           _buildCard(
@@ -141,6 +107,13 @@ class SettingsPage extends StatelessWidget {
               ),
             ],
           ),
+
+          const SizedBox(height: 28),
+
+          // Privacy section (informative card)
+          _buildSectionTitle(context, 'Privacidad'),
+          const SizedBox(height: 12),
+          _buildPrivacyInfoCard(context),
 
           const SizedBox(height: 28),
 
@@ -188,12 +161,38 @@ class SettingsPage extends StatelessWidget {
           _buildCard(
             context,
             children: [
-              _buildInfoTile(
-                context,
-                icon: Icons.info_outline,
-                title: 'Versión',
-                subtitle: AppConstants.appVersion,
-                color: AppColors.textSecondary,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.info_outline,
+                        color: AppColors.textSecondary,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Text(
+                      'Versión',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      AppConstants.appVersion,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -241,6 +240,121 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  Widget _buildPrivacyInfoCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.success.withValues(alpha: 0.08),
+            AppColors.info.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.success.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.verified_user_outlined,
+                  color: AppColors.success,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tus datos están protegidos',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Followlytics respeta tu privacidad',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Info items
+          _buildPrivacyItem(
+            context,
+            icon: Icons.phone_android,
+            text: 'Procesamiento 100% local en tu dispositivo',
+          ),
+          const SizedBox(height: 12),
+          _buildPrivacyItem(
+            context,
+            icon: Icons.cloud_off,
+            text: 'Sin servidores ni almacenamiento en la nube',
+          ),
+          const SizedBox(height: 12),
+          _buildPrivacyItem(
+            context,
+            icon: Icons.lock_outline,
+            text: 'No necesitamos tu contraseña de Instagram',
+          ),
+          const SizedBox(height: 12),
+          _buildPrivacyItem(
+            context,
+            icon: Icons.visibility_off_outlined,
+            text: 'Tus datos nunca salen de tu móvil',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrivacyItem(
+    BuildContext context, {
+    required IconData icon,
+    required String text,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 18,
+          color: AppColors.success,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 4),
@@ -268,51 +382,6 @@ class SettingsPage extends StatelessWidget {
 
   Widget _buildDivider() {
     return const Divider(height: 1, indent: 56, color: AppColors.border);
-  }
-
-  Widget _buildInfoTile(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildActionTile(

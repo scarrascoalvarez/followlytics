@@ -25,7 +25,9 @@ class AppConstants {
   static const String likedPostsPath = 'your_instagram_activity/likes/liked_posts.json';
   static const String likedCommentsPath = 'your_instagram_activity/likes/liked_comments.json';
   static const String commentsPath = 'your_instagram_activity/comments/post_comments_1.json';
+  static const String reelsCommentsPath = 'your_instagram_activity/comments/reels_comments.json';
   static const String storyLikesPath = 'your_instagram_activity/story_interactions/story_likes.json';
+  static const String dmInboxPath = 'your_instagram_activity/messages/inbox';
   
   // Privacy messages
   static const List<String> privacyMessages = [
