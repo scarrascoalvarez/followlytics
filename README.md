@@ -69,7 +69,7 @@ Your Instagram data is sensitive. That's why Followlytics is designed to give yo
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/followlytics.git
+git clone https://github.com/scarrascoalvarez/followlytics
 
 # Navigate to project directory
 cd followlytics
