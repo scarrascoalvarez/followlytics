@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
+import '../../domain/models/export_guide_step.dart';
 import '../widgets/instagram_button.dart';
 
 class ExportGuidePage extends StatefulWidget {
@@ -14,47 +16,36 @@ class ExportGuidePage extends StatefulWidget {
   State<ExportGuidePage> createState() => _ExportGuidePageState();
 }
 
-class _ExportGuidePageState extends State<ExportGuidePage> {
-  final _scrollController = ScrollController();
+class _ExportGuidePageState extends State<ExportGuidePage>
+    with TickerProviderStateMixin {
+  late PageController _pageController;
+  late List<ExportGuideStep> _steps;
+  int _currentPage = 0;
+  
+  // Para el auto-avance de la barra de progreso tipo Stories
+  late AnimationController _progressController;
+  
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _steps = ExportGuideSteps.generateSteps(
+      onOpenInstagram: _openInstagram,
+      onHaveFile: () => context.go('/import'),
+    );
+    
+    _progressController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    );
+  }
 
-  final _steps = const [
-    _GuideStep(
-      number: 1,
-      title: 'Abre la configuración de Instagram',
-      description: 'Ve a tu perfil y toca el menú ☰, luego "Centro de cuentas".',
-      icon: Icons.settings_outlined,
-    ),
-    _GuideStep(
-      number: 2,
-      title: 'Tu información y permisos',
-      description: 'Busca la sección "Tu información y permisos" y selecciónala.',
-      icon: Icons.info_outline,
-    ),
-    _GuideStep(
-      number: 3,
-      title: 'Descargar tu información',
-      description: 'Toca "Descargar tu información" para iniciar el proceso de exportación.',
-      icon: Icons.download_outlined,
-    ),
-    _GuideStep(
-      number: 4,
-      title: 'Selecciona formato JSON',
-      description: 'Elige "Exportar a dispositivo", selecciona formato JSON y toda la información disponible.',
-      icon: Icons.data_object,
-    ),
-    _GuideStep(
-      number: 5,
-      title: 'Espera el email',
-      description: 'Instagram te enviará un email cuando tu exportación esté lista. Puede tardar hasta 48 horas.',
-      icon: Icons.email_outlined,
-    ),
-    _GuideStep(
-      number: 6,
-      title: 'Descarga e importa',
-      description: 'Descarga el archivo ZIP desde el email e impórtalo en esta app.',
-      icon: Icons.folder_zip_outlined,
-    ),
-  ];
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _progressController.dispose();
+    super.dispose();
+  }
 
   Future<void> _openInstagram() async {
     final url = Uri.parse(AppConstants.instagramExportUrl);
@@ -63,236 +54,417 @@ class _ExportGuidePageState extends State<ExportGuidePage> {
     }
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
+  void _goToPage(int page) {
+    if (page >= 0 && page < _steps.length) {
+      _pageController.animateToPage(
+        page,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final tapPosition = details.globalPosition.dx;
+    
+    // Tap en el tercio izquierdo = anterior
+    // Tap en los dos tercios derechos = siguiente
+    if (tapPosition < screenWidth / 3) {
+      _goToPage(_currentPage - 1);
+    } else {
+      _goToPage(_currentPage + 1);
+    }
+    
+    // Feedback háptico
+    HapticFeedback.lightImpact();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        title: const Text('Cómo exportar'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.go('/onboarding'),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header con indicador tipo Stories y botón cerrar
+            _buildHeader(),
+            
+            // Carrusel principal
+            Expanded(
+              child: GestureDetector(
+                onTapDown: _onTapDown,
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: _steps.length,
+                  onPageChanged: (index) {
+                    setState(() => _currentPage = index);
+                    HapticFeedback.selectionClick();
+                  },
+                  itemBuilder: (context, index) {
+                    return _buildStepPage(_steps[index], index);
+                  },
+                ),
+              ),
+            ),
+            
+            // Botones de navegación y acción
+            _buildBottomNavigation(),
+          ],
         ),
       ),
-      body: Column(
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Column(
         children: [
-          Expanded(
-            child: ListView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(20),
-              children: [
-                // Header
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.border,
-                      width: 0.5,
+          // Fila con botón cerrar
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back_ios, size: 20),
+                onPressed: () => context.go('/onboarding'),
+                color: AppColors.textSecondary,
+                tooltip: 'Volver al inicio',
+              ),
+              const Spacer(),
+              Text(
+                '${_currentPage + 1} de ${_steps.length}',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: const Icon(Icons.close, size: 22),
+                onPressed: () => context.go('/import'),
+                color: AppColors.textSecondary,
+                tooltip: 'Ya tengo el archivo',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 8),
+          
+          // Indicador de progreso tipo Stories
+          _buildStoriesProgressIndicator(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStoriesProgressIndicator() {
+    return Row(
+      children: List.generate(_steps.length, (index) {
+        final isActive = index == _currentPage;
+        final isCompleted = index < _currentPage;
+        final isCritical = _steps[index].isCritical;
+        
+        return Expanded(
+          child: Container(
+            margin: EdgeInsets.only(
+              left: index == 0 ? 0 : 2,
+              right: index == _steps.length - 1 ? 0 : 2,
+            ),
+            height: 3,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(2),
+              color: isCompleted
+                  ? (isCritical ? AppColors.warning : AppColors.primary)
+                  : isActive
+                      ? AppColors.primary.withValues(alpha: 0.8)
+                      : AppColors.surfaceVariant,
+            ),
+            child: isActive
+                ? TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 300),
+                    builder: (context, value, child) {
+                      return FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: value,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(2),
+                            color: isCritical
+                                ? AppColors.warning
+                                : AppColors.primary,
+                          ),
+                        ),
+                      );
+                    },
+                  )
+                : null,
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildStepPage(ExportGuideStep step, int index) {
+    final isCritical = step.isCritical;
+    
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Número y título del paso
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isCritical
+                      ? AppColors.warning.withValues(alpha: 0.2)
+                      : AppColors.primary.withValues(alpha: 0.2),
+                ),
+                child: Center(
+                  child: Text(
+                    '${step.stepNumber}',
+                    style: TextStyle(
+                      color: isCritical ? AppColors.warning : AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
                   ),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceVariant,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.security,
-                          size: 28,
-                          color: AppColors.textSecondary,
-                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  step.title,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '¿Por qué exportar?',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Al usar tus propios datos exportados, garantizamos tu privacidad. No necesitamos tu contraseña ni acceso a tu cuenta.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1),
-
-                const SizedBox(height: 24),
-
-                // Steps
-                ...List.generate(_steps.length, (index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: _steps[index]
-                        .animate()
-                        .fadeIn(delay: (100 * index).ms, duration: 400.ms)
-                        .slideX(begin: 0.1, duration: 400.ms),
-                  );
-                }),
-
-                const SizedBox(height: 8),
-
-                // Privacy note
+                ),
+              ),
+              if (isCritical)
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceVariant,
+                    color: AppColors.warning.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.verified_user_outlined,
-                        color: AppColors.primary,
-                        size: 24,
+                        Icons.priority_high,
+                        size: 14,
+                        color: AppColors.warning,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Tus datos se procesan solo en tu dispositivo. Nunca se envían a ningún servidor.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Importante',
+                        style: TextStyle(
+                          color: AppColors.warning,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
-                ).animate().fadeIn(delay: 600.ms),
-
-                const SizedBox(height: 100),
-              ],
-            ),
-          ),
-
-          // Bottom buttons
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              border: Border(
-                top: BorderSide(color: AppColors.border, width: 0.5),
+                ),
+            ],
+          ).animate().fadeIn(duration: 300.ms).slideX(begin: -0.05),
+          
+          const SizedBox(height: 16),
+          
+          // Descripción
+          Text(
+            step.description,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: AppColors.textSecondary,
+                  height: 1.5,
+                ),
+          ).animate().fadeIn(delay: 100.ms, duration: 300.ms),
+          
+          // Tip importante (si existe)
+          if (step.importantTip != null) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isCritical
+                    ? AppColors.warning.withValues(alpha: 0.1)
+                    : AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isCritical
+                      ? AppColors.warning.withValues(alpha: 0.3)
+                      : AppColors.primary.withValues(alpha: 0.3),
+                ),
               ),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  InstagramButton(
-                    text: 'Abrir Instagram',
-                    icon: Icons.open_in_new,
-                    onPressed: _openInstagram,
+                  Icon(
+                    isCritical ? Icons.warning_amber : Icons.lightbulb_outline,
+                    color: isCritical ? AppColors.warning : AppColors.primary,
+                    size: 20,
                   ),
-                  const SizedBox(height: 12),
-                  InstagramButton(
-                    text: 'Ya tengo el archivo',
-                    isOutlined: true,
-                    onPressed: () => context.go('/import'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      step.importantTip!,
+                      style: TextStyle(
+                        color: isCritical
+                            ? AppColors.warning
+                            : AppColors.primary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GuideStep extends StatelessWidget {
-  final int number;
-  final String title;
-  final String description;
-  final IconData icon;
-
-  const _GuideStep({
-    required this.number,
-    required this.title,
-    required this.description,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border, width: 0.5),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Number circle - simple gray/primary style
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.surfaceVariant,
-              border: Border.all(color: AppColors.border, width: 1),
-            ),
-            child: Center(
-              child: Text(
-                '$number',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
+            ).animate().fadeIn(delay: 200.ms, duration: 300.ms).scale(
+                  begin: const Offset(0.95, 0.95),
+                  end: const Offset(1, 1),
+                ),
+          ],
+          
+          const SizedBox(height: 24),
+          
+          // Mockup ilustrado
+          Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 320),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  height: 340,
+                  decoration: BoxDecoration(
+                    color: step.stepNumber == 1 || step.stepNumber == 14
+                        ? AppColors.surface
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: step.mockupBuilder(context),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 14),
-          // Content
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ).animate().fadeIn(delay: 150.ms, duration: 400.ms).slideY(
+                begin: 0.05,
+                curve: Curves.easeOut,
+              ),
+          
+          const SizedBox(height: 24),
+          
+          // Indicador de navegación
+          Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    Icon(icon, size: 18, color: AppColors.textSecondary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                    ),
-                  ],
+                Icon(
+                  Icons.chevron_left,
+                  color: _currentPage > 0
+                      ? AppColors.textSecondary
+                      : Colors.transparent,
+                  size: 20,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(width: 8),
                 Text(
-                  description,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
-                        height: 1.4,
-                      ),
+                  'Desliza o toca para navegar',
+                  style: TextStyle(
+                    color: AppColors.textTertiary,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.chevron_right,
+                  color: _currentPage < _steps.length - 1
+                      ? AppColors.textSecondary
+                      : Colors.transparent,
+                  size: 20,
                 ),
               ],
             ),
-          ),
+          ).animate().fadeIn(delay: 300.ms),
+          
+          const SizedBox(height: 80),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomNavigation() {
+    final currentStep = _steps[_currentPage];
+    final isLastStep = _currentPage == _steps.length - 1;
+    final hasAction = currentStep.actionButtonText != null;
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border(
+          top: BorderSide(color: AppColors.border, width: 0.5),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Botón de acción principal (si existe)
+          if (hasAction)
+            InstagramButton(
+              text: currentStep.actionButtonText!,
+              icon: _currentPage == 1
+                  ? Icons.open_in_new
+                  : isLastStep
+                      ? Icons.folder_open
+                      : null,
+              onPressed: currentStep.onActionPressed,
+            ),
+          
+          // Botón secundario de navegación
+          if (!isLastStep) ...[
+            if (hasAction) const SizedBox(height: 12),
+            InstagramButton(
+              text: hasAction ? 'Siguiente paso' : 'Continuar',
+              isOutlined: hasAction,
+              onPressed: () => _goToPage(_currentPage + 1),
+            ),
+          ],
+          
+          // En el último paso, mostrar opción de ver guía otra vez
+          if (isLastStep && !hasAction) ...[
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => _goToPage(0),
+              child: Text(
+                'Ver guía desde el inicio',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
-
