@@ -21,8 +21,6 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accentColor ?? AppColors.primary;
-    
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -43,10 +41,10 @@ class StatCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.15),
+                      color: AppColors.surfaceVariant,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(icon, color: color, size: 18),
+                    child: Icon(icon, color: AppColors.textSecondary, size: 18),
                   ),
                 if (onTap != null)
                   Icon(
@@ -111,13 +109,15 @@ class GradientStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Use surface color with primary accent instead of colorful gradient
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: gradient,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border, width: 0.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,15 +128,15 @@ class GradientStatCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: AppColors.surfaceVariant,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: Colors.white, size: 20),
+                  child: Icon(icon, color: AppColors.textSecondary, size: 20),
                 ),
                 if (onTap != null)
                   Icon(
                     Icons.chevron_right,
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: AppColors.textTertiary,
                     size: 20,
                   ),
               ],
@@ -146,14 +146,14 @@ class GradientStatCard extends StatelessWidget {
               value,
               style: Theme.of(context).textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: Colors.white,
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.85),
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -162,4 +162,3 @@ class GradientStatCard extends StatelessWidget {
     );
   }
 }
-

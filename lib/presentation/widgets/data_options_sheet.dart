@@ -1,59 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/di/injection_container.dart';
 import '../../core/theme/app_theme.dart';
-import '../../domain/repositories/instagram_repository.dart';
+import '../../core/utils/data_utils.dart';
 
 void showDataOptionsSheet(BuildContext context) {
+  // Save the parent context before showing the sheet
+  final parentContext = context;
+  
   showModalBottomSheet(
     context: context,
     backgroundColor: Colors.transparent,
-    builder: (context) => const DataOptionsSheet(),
+    builder: (sheetContext) => DataOptionsSheet(parentContext: parentContext),
   );
 }
 
 class DataOptionsSheet extends StatelessWidget {
-  const DataOptionsSheet({super.key});
+  final BuildContext parentContext;
+  
+  const DataOptionsSheet({
+    super.key,
+    required this.parentContext,
+  });
 
-  Future<void> _clearData(BuildContext context) async {
-    Navigator.pop(context); // Close sheet first
+  Future<void> _clearData(BuildContext sheetContext) async {
+    // Close the sheet first
+    Navigator.pop(sheetContext);
     
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          '¿Eliminar datos?',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        content: Text(
-          'Se eliminarán todos los datos importados. Tendrás que volver a importar tu archivo de Instagram.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
+    // Use the parent context for the dialog and navigation
+    if (parentContext.mounted) {
+      await clearInstagramDataWithConfirmation(parentContext);
+    }
+  }
 
-    if (confirmed == true && context.mounted) {
-      await sl<InstagramRepository>().clearData();
-      if (context.mounted) {
-        context.go('/export-guide');
-      }
+  void _goToImport(BuildContext sheetContext) {
+    Navigator.pop(sheetContext);
+    if (parentContext.mounted) {
+      parentContext.go('/import');
     }
   }
 
@@ -96,11 +79,7 @@ class DataOptionsSheet extends StatelessWidget {
             icon: Icons.refresh,
             title: 'Actualizar datos',
             subtitle: 'Importar un nuevo archivo de Instagram',
-            color: AppColors.info,
-            onTap: () {
-              Navigator.pop(context);
-              context.go('/import');
-            },
+            onTap: () => _goToImport(context),
           ),
 
           const SizedBox(height: 12),
@@ -111,7 +90,7 @@ class DataOptionsSheet extends StatelessWidget {
             icon: Icons.delete_outline,
             title: 'Eliminar datos',
             subtitle: 'Borrar todos los datos importados',
-            color: AppColors.error,
+            isDestructive: true,
             onTap: () => _clearData(context),
           ),
 
@@ -126,7 +105,7 @@ class DataOptionsSheet extends StatelessWidget {
     required IconData icon,
     required String title,
     required String subtitle,
-    required Color color,
+    bool isDestructive = false,
     required VoidCallback onTap,
   }) {
     return Material(
@@ -146,10 +125,14 @@ class DataOptionsSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: color, size: 22),
+                child: Icon(
+                  icon, 
+                  color: isDestructive ? AppColors.error : AppColors.textSecondary, 
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -160,6 +143,7 @@ class DataOptionsSheet extends StatelessWidget {
                       title,
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.w500,
+                            color: isDestructive ? AppColors.error : null,
                           ),
                     ),
                     const SizedBox(height: 2),
@@ -184,4 +168,3 @@ class DataOptionsSheet extends StatelessWidget {
     );
   }
 }
-

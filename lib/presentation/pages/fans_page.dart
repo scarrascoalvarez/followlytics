@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/di/injection_container.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/services/reviewed_profiles_service.dart';
+import '../../domain/entities/interaction_analytics.dart';
 import '../blocs/analytics/analytics_bloc.dart';
+import '../widgets/reviewed_section.dart';
 import '../widgets/swipeable_profile_tile.dart';
 
 class FansPage extends StatefulWidget {
@@ -17,24 +19,9 @@ class FansPage extends StatefulWidget {
 
 class _FansPageState extends State<FansPage> {
   String _searchQuery = '';
-  bool _hideReviewed = false;
-  int _reviewedCount = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _updateReviewedCount();
-  }
-
-  void _updateReviewedCount() {
-    final state = context.read<AnalyticsBloc>().state;
-    final fans = state.followAnalytics?.fans ?? [];
-    final reviewedService = sl<ReviewedProfilesService>();
-    setState(() {
-      _reviewedCount = fans
-          .where((p) => reviewedService.isReviewed(p.username))
-          .length;
-    });
+  void _refreshList() {
+    setState(() {});
   }
 
   @override
@@ -48,36 +35,31 @@ class _FansPageState extends State<FansPage> {
           icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => context.go('/'),
         ),
-        actions: [
-          IconButton(
-            onPressed: () => setState(() => _hideReviewed = !_hideReviewed),
-            tooltip: _hideReviewed ? 'Mostrar todos' : 'Ocultar revisados',
-            icon: Icon(
-              _hideReviewed ? Icons.visibility : Icons.visibility_off,
-              size: 22,
-              color: _hideReviewed ? AppColors.success : AppColors.textSecondary,
-            ),
-          ),
-        ],
       ),
       body: BlocBuilder<AnalyticsBloc, AnalyticsState>(
         builder: (context, state) {
           final reviewedService = sl<ReviewedProfilesService>();
           final fans = state.followAnalytics?.fans ?? [];
           
-          var filtered = fans
+          // Separate reviewed and pending profiles
+          final reviewedProfiles = fans
+              .where((p) => reviewedService.isReviewed(p.username))
+              .where((p) => p.username
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase()))
+              .toList();
+          
+          final pendingProfiles = fans
+              .where((p) => !reviewedService.isReviewed(p.username))
               .where((p) => p.username
                   .toLowerCase()
                   .contains(_searchQuery.toLowerCase()))
               .toList();
 
-          if (_hideReviewed) {
-            filtered = filtered
-                .where((p) => !reviewedService.isReviewed(p.username))
-                .toList();
-          }
-
-          final pendingCount = fans.length - _reviewedCount;
+          final totalReviewed = fans
+              .where((p) => reviewedService.isReviewed(p.username))
+              .length;
+          final pendingCount = fans.length - totalReviewed;
 
           return Column(
             children: [
@@ -90,25 +72,21 @@ class _FansPageState extends State<FansPage> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.success.withValues(alpha: 0.15),
-                            const Color(0xFF1DE9B6).withValues(alpha: 0.1),
-                          ],
-                        ),
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border, width: 0.5),
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppColors.success.withValues(alpha: 0.2),
+                              color: AppColors.surfaceVariant,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.favorite_outline,
-                              color: AppColors.success,
+                              color: AppColors.textSecondary,
                               size: 24,
                             ),
                           ),
@@ -117,39 +95,12 @@ class _FansPageState extends State<FansPage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      '${fans.length} fans',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(fontWeight: FontWeight.w600),
-                                    ),
-                                    if (_reviewedCount > 0) ...[
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.success.withValues(alpha: 0.2),
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: Text(
-                                          '$_reviewedCount ✓',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .labelSmall
-                                              ?.copyWith(
-                                                color: AppColors.success,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
+                                Text(
+                                  '${fans.length} fans',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w600),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
@@ -189,7 +140,7 @@ class _FansPageState extends State<FansPage> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Desliza a la izquierda para marcar como revisado',
+                            'Desliza a la izquierda para archivar',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: AppColors.textTertiary,
                                 ),
@@ -219,53 +170,82 @@ class _FansPageState extends State<FansPage> {
                 ),
               ),
 
-              // List
+              // List with reviewed section
               Expanded(
-                child: filtered.isEmpty
+                child: pendingProfiles.isEmpty && reviewedProfiles.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              _hideReviewed
-                                  ? Icons.check_circle_outline
-                                  : Icons.sentiment_satisfied_alt,
+                              Icons.sentiment_satisfied_alt,
                               size: 48,
-                              color: AppColors.success,
+                              color: AppColors.textSecondary,
                             ),
                             const SizedBox(height: 16),
                             Text(
                               _searchQuery.isNotEmpty
                                   ? 'No se encontraron resultados'
-                                  : _hideReviewed
-                                      ? '¡Todos revisados!'
-                                      : 'No tienes fans sin seguir',
+                                  : 'No tienes fans sin seguir',
                               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                     color: AppColors.textSecondary,
                                   ),
                             ),
-                            if (_hideReviewed && _reviewedCount > 0) ...[
-                              const SizedBox(height: 12),
-                              TextButton(
-                                onPressed: () =>
-                                    setState(() => _hideReviewed = false),
-                                child: const Text('Mostrar revisados'),
-                              ),
-                            ],
                           ],
                         ),
                       )
-                    : ListView.builder(
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final profile = filtered[index];
-                          return SwipeableProfileTile(
-                            profile: profile,
-                            isFollower: true,
-                            isFollowing: false,
-                            onReviewed: _updateReviewedCount,
-                          );
-                        },
+                    : CustomScrollView(
+                        slivers: [
+                          // Reviewed section (collapsible)
+                          SliverToBoxAdapter(
+                            child: ReviewedSection(
+                              reviewedProfiles: reviewedProfiles,
+                              isFollower: true,
+                              isFollowing: false,
+                              onProfileUnreviewed: _refreshList,
+                              userDetails: state.interactionAnalytics?.userDetails.map(
+                                (key, value) => MapEntry(key.toLowerCase(), value),
+                              ),
+                              userScores: state.interactionAnalytics?.combinedTopUsers
+                                  .fold<Map<String, UserInteractionScore>>(
+                                    {},
+                                    (map, score) {
+                                      map[score.username.toLowerCase()] = score;
+                                      return map;
+                                    },
+                                  ),
+                            ),
+                          ),
+
+                          // Pending profiles list
+                          SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final profile = pendingProfiles[index];
+                                final usernameLower = profile.username.toLowerCase();
+                                // Buscar interacciones de forma case-insensitive
+                                final userScore = state.interactionAnalytics?.combinedTopUsers
+                                    .where((u) => u.username.toLowerCase() == usernameLower)
+                                    .firstOrNull;
+                                final userDetails = state.interactionAnalytics?.userDetails.entries
+                                    .where((e) => e.key.toLowerCase() == usernameLower)
+                                    .map((e) => e.value)
+                                    .firstOrNull;
+                                return SwipeableProfileTile(
+                                  profile: profile,
+                                  isFollower: true,
+                                  isFollowing: false,
+                                  onReviewed: _refreshList,
+                                  likesCount: userScore?.likesCount,
+                                  commentsCount: userScore?.commentsCount,
+                                  storyLikesCount: userScore?.storyLikesCount,
+                                  interactionDetails: userDetails,
+                                );
+                              },
+                              childCount: pendingProfiles.length,
+                            ),
+                          ),
+                        ],
                       ),
               ),
             ],

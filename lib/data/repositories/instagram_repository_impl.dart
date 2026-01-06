@@ -133,18 +133,11 @@ class InstagramRepositoryImpl implements InstagramRepository {
       }
     }
 
-    // Build DM counts map (DMs don't have per-message timestamps in the simple parse)
-    final dmCounts = <String, int>{};
-    for (final dm in data.dmConversations) {
-      dmCounts[dm.username] = dm.messageCount;
-    }
-
-    // Get all users and calculate combined scores
+    // Get all users from likes, comments, and story likes only (NO DMs)
     final allUsers = <String>{
       ...likeCounts.keys,
       ...commentCounts.keys,
       ...storyLikeCounts.keys,
-      ...dmCounts.keys,
     };
 
     final combinedScores = allUsers.map((username) {
@@ -153,7 +146,6 @@ class InstagramRepositoryImpl implements InstagramRepository {
         likesCount: likeCounts[username] ?? 0,
         commentsCount: commentCounts[username] ?? 0,
         storyLikesCount: storyLikeCounts[username] ?? 0,
-        dmCount: dmCounts[username] ?? 0,
       );
     }).toList();
 
@@ -174,7 +166,6 @@ class InstagramRepositoryImpl implements InstagramRepository {
         comments: comments,
         likedPosts: likes,
         storyInteractions: stories,
-        dmCount: dmCounts[username] ?? 0,
       );
     }
 
@@ -200,4 +191,3 @@ class InstagramRepositoryImpl implements InstagramRepository {
     );
   }
 }
-

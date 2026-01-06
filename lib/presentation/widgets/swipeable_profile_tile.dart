@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/di/injection_container.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../data/services/reviewed_profiles_service.dart';
-import '../../domain/entities/instagram_profile.dart';
-import 'profile_detail_sheet.dart';
+import '../../domain/entities/entities.dart';
+import 'unified_profile_sheet.dart';
 
 class SwipeableProfileTile extends StatefulWidget {
   final InstagramProfile profile;
@@ -13,6 +14,10 @@ class SwipeableProfileTile extends StatefulWidget {
   final bool? isFollowing;
   final bool? isMutual;
   final VoidCallback? onReviewed;
+  final int? likesCount;
+  final int? commentsCount;
+  final int? storyLikesCount;
+  final UserInteractionDetails? interactionDetails;
 
   const SwipeableProfileTile({
     super.key,
@@ -21,6 +26,10 @@ class SwipeableProfileTile extends StatefulWidget {
     this.isFollowing,
     this.isMutual,
     this.onReviewed,
+    this.likesCount,
+    this.commentsCount,
+    this.storyLikesCount,
+    this.interactionDetails,
   });
 
   @override
@@ -43,13 +52,23 @@ class _SwipeableProfileTileState extends State<SwipeableProfileTile> {
   }
 
   void _showDetail(BuildContext context) {
-    showProfileDetailSheet(
+    showUnifiedProfileSheet(
       context,
       profile: widget.profile,
       isFollower: widget.isFollower,
       isFollowing: widget.isFollowing,
-      isMutual: widget.isMutual,
+      likesCount: widget.likesCount,
+      commentsCount: widget.commentsCount,
+      storyLikesCount: widget.storyLikesCount,
+      details: widget.interactionDetails,
     );
+  }
+
+  Future<void> _openInstagram() async {
+    final url = Uri.parse('https://www.instagram.com/${widget.profile.username}');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -64,7 +83,7 @@ class _SwipeableProfileTileState extends State<SwipeableProfileTile> {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
-        color: _isReviewed ? AppColors.warning : AppColors.success,
+        color: _isReviewed ? AppColors.textSecondary : AppColors.primary,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
@@ -87,7 +106,7 @@ class _SwipeableProfileTileState extends State<SwipeableProfileTile> {
       child: Container(
         decoration: BoxDecoration(
           color: _isReviewed 
-              ? AppColors.success.withValues(alpha: 0.08)
+              ? AppColors.surfaceVariant
               : Colors.transparent,
         ),
         child: ListTile(
@@ -109,12 +128,40 @@ class _SwipeableProfileTileState extends State<SwipeableProfileTile> {
                 Icon(
                   Icons.check_circle,
                   size: 16,
-                  color: AppColors.success,
+                  color: AppColors.primary,
                 ),
               ],
             ],
           ),
           subtitle: _buildSubtitle(context),
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.3),
+              ),
+            ),
+            child: InkWell(
+              onTap: _openInstagram,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.open_in_new, size: 14, color: AppColors.primary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Ver',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           onTap: () => _showDetail(context),
         ),
       ),
@@ -122,47 +169,35 @@ class _SwipeableProfileTileState extends State<SwipeableProfileTile> {
   }
 
   Widget _buildAvatar() {
+    // Simple gray border, or primary border if reviewed
     return Container(
       width: 48,
       height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: _isReviewed
-            ? LinearGradient(
-                colors: [
-                  AppColors.success.withValues(alpha: 0.5),
-                  AppColors.success.withValues(alpha: 0.3),
-                ],
-              )
-            : AppColors.instagramGradient,
+        border: Border.all(
+          color: _isReviewed ? AppColors.primary : AppColors.border,
+          width: _isReviewed ? 2 : 1,
+        ),
+        color: AppColors.surfaceVariant,
       ),
       child: Center(
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: _isReviewed ? AppColors.surface : AppColors.surface,
-          ),
-          child: Center(
-            child: _isReviewed
-                ? Icon(
-                    Icons.check,
-                    color: AppColors.success,
-                    size: 20,
-                  )
-                : Text(
-                    widget.profile.username.isNotEmpty
-                        ? widget.profile.username[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-          ),
-        ),
+        child: _isReviewed
+            ? Icon(
+                Icons.check,
+                color: AppColors.primary,
+                size: 20,
+              )
+            : Text(
+                widget.profile.username.isNotEmpty
+                    ? widget.profile.username[0].toUpperCase()
+                    : '?',
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
       ),
     );
   }
@@ -182,4 +217,3 @@ class _SwipeableProfileTileState extends State<SwipeableProfileTile> {
   }
 
 }
-

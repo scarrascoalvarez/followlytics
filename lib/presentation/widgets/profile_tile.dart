@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../domain/entities/instagram_profile.dart';
-import 'profile_detail_sheet.dart';
+import 'unified_profile_sheet.dart';
 
 class ProfileTile extends StatelessWidget {
   final InstagramProfile profile;
@@ -13,6 +14,9 @@ class ProfileTile extends StatelessWidget {
   final bool? isFollower;
   final bool? isFollowing;
   final bool? isMutual;
+  final int? likesCount;
+  final int? commentsCount;
+  final int? storyLikesCount;
 
   const ProfileTile({
     super.key,
@@ -23,16 +27,28 @@ class ProfileTile extends StatelessWidget {
     this.isFollower,
     this.isFollowing,
     this.isMutual,
+    this.likesCount,
+    this.commentsCount,
+    this.storyLikesCount,
   });
 
   void _showDetail(BuildContext context) {
-    showProfileDetailSheet(
+    showUnifiedProfileSheet(
       context,
       profile: profile,
       isFollower: isFollower,
       isFollowing: isFollowing,
-      isMutual: isMutual,
+      likesCount: likesCount,
+      commentsCount: commentsCount,
+      storyLikesCount: storyLikesCount,
     );
+  }
+
+  Future<void> _openInstagram() async {
+    final url = Uri.parse('https://www.instagram.com/${profile.username}');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -47,38 +63,30 @@ class ProfileTile extends StatelessWidget {
         ),
       ),
       subtitle: _buildSubtitle(context),
-      trailing: trailing,
+      trailing: trailing ?? _buildInstagramButton(),
       onTap: () => _showDetail(context),
     );
   }
 
   Widget _buildAvatar() {
+    // Simple gray border instead of colorful gradient
     return Container(
       width: 48,
       height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: AppColors.instagramGradient,
+        border: Border.all(color: AppColors.border, width: 1),
+        color: AppColors.surfaceVariant,
       ),
       child: Center(
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.surface,
-          ),
-          child: Center(
-            child: Text(
-              profile.username.isNotEmpty 
-                  ? profile.username[0].toUpperCase() 
-                  : '?',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+        child: Text(
+          profile.username.isNotEmpty 
+              ? profile.username[0].toUpperCase() 
+              : '?',
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -89,7 +97,9 @@ class ProfileTile extends StatelessWidget {
     if (subtitle != null) {
       return Text(
         subtitle!,
-        style: Theme.of(context).textTheme.bodySmall,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: AppColors.textSecondary,
+        ),
       );
     }
     if (showDate && profile.timestamp != null) {
@@ -97,12 +107,44 @@ class ProfileTile extends StatelessWidget {
         DateFormatter.formatTimestampRelative(
           profile.timestamp!.millisecondsSinceEpoch ~/ 1000,
         ),
-        style: Theme.of(context).textTheme.bodySmall,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: AppColors.textSecondary,
+        ),
       );
     }
     return null;
   }
 
+  Widget _buildInstagramButton() {
+    return GestureDetector(
+      onTap: _openInstagram,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.open_in_new, size: 14, color: AppColors.primary),
+            const SizedBox(width: 4),
+            Text(
+              'Ver',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class InteractionProfileTile extends StatelessWidget {
@@ -127,6 +169,13 @@ class InteractionProfileTile extends StatelessWidget {
     this.onTap,
   });
 
+  Future<void> _openInstagram() async {
+    final url = Uri.parse('https://www.instagram.com/$username');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListTile(
@@ -139,36 +188,62 @@ class InteractionProfileTile extends StatelessWidget {
         ),
       ),
       subtitle: _buildStats(context),
-      trailing: _buildScore(context),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildScore(context),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: _openInstagram,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.open_in_new, size: 14, color: AppColors.primary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Ver',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
       onTap: onTap,
     );
   }
 
   Widget _buildAvatar() {
+    // Simple gray border instead of colorful gradient
     return Container(
       width: 48,
       height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: AppColors.instagramGradient,
+        border: Border.all(color: AppColors.border, width: 1),
+        color: AppColors.surfaceVariant,
       ),
       child: Center(
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.surface,
-          ),
-          child: Center(
-            child: Text(
-              username.isNotEmpty ? username[0].toUpperCase() : '?',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+        child: Text(
+          username.isNotEmpty ? username[0].toUpperCase() : '?',
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -183,7 +258,9 @@ class InteractionProfileTile extends StatelessWidget {
     
     return Text(
       stats.join(' · '),
-      style: Theme.of(context).textTheme.bodySmall,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: AppColors.textSecondary,
+      ),
     );
   }
 
@@ -191,13 +268,13 @@ class InteractionProfileTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.15),
+        color: AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         '$totalScore',
         style: TextStyle(
-          color: AppColors.primary,
+          color: AppColors.textPrimary,
           fontSize: 15,
           fontWeight: FontWeight.w700,
         ),
@@ -205,4 +282,3 @@ class InteractionProfileTile extends StatelessWidget {
     );
   }
 }
-

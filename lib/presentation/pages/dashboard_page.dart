@@ -9,7 +9,7 @@ import '../../domain/entities/entities.dart';
 import '../blocs/analytics/analytics_bloc.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/profile_tile.dart';
-import '../widgets/profile_detail_sheet.dart';
+import '../widgets/unified_profile_sheet.dart';
 import '../widgets/data_options_sheet.dart';
 
 class DashboardPage extends StatelessWidget {
@@ -91,7 +91,7 @@ class DashboardPage extends StatelessWidget {
             Icon(
               Icons.error_outline,
               size: 64,
-              color: AppColors.error,
+              color: AppColors.textSecondary,
             ),
             const SizedBox(height: 24),
             Text(
@@ -110,16 +110,33 @@ class DashboardPage extends StatelessWidget {
   void _showInteractionDetail(
     BuildContext context,
     UserInteractionScore user,
-    UserInteractionDetails? details,
     bool isFollower,
     bool isFollowing,
+    AnalyticsState state,
   ) {
-    showInteractionDetailSheet(
+    // Buscar timestamp en followers/following para mostrar fecha en el detalle
+    DateTime? timestamp;
+    final usernameLower = user.username.toLowerCase();
+    
+    if (isFollower) {
+      final follower = state.instagramData?.followers
+          .where((p) => p.username.toLowerCase() == usernameLower)
+          .firstOrNull;
+      timestamp = follower?.timestamp;
+    }
+    if (timestamp == null && isFollowing) {
+      final following = state.instagramData?.following
+          .where((p) => p.username.toLowerCase() == usernameLower)
+          .firstOrNull;
+      timestamp = following?.timestamp;
+    }
+
+    showUnifiedProfileSheetFromInteraction(
       context,
       user: user,
-      details: details,
       isFollower: isFollower,
       isFollowing: isFollowing,
+      timestamp: timestamp,
     );
   }
 
@@ -128,23 +145,17 @@ class DashboardPage extends StatelessWidget {
     
     return CustomScrollView(
       slivers: [
-        // App Bar
+        // App Bar - simple white text, no gradient
         SliverAppBar(
           backgroundColor: AppColors.background,
           floating: true,
-          title: ShaderMask(
-            shaderCallback: (bounds) =>
-                AppColors.instagramGradient.createShader(
-              Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-            ),
-            child: Text(
-              'Followlytics',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    fontSize: 20,
-                  ),
-            ),
+          title: Text(
+            'Followlytics',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  fontSize: 20,
+                ),
           ),
           actions: [
             IconButton(
@@ -203,7 +214,7 @@ class DashboardPage extends StatelessWidget {
 
               const SizedBox(height: 24),
 
-              // Main stats grid
+              // Main stats grid - now using sober design
               Row(
                 children: [
                   Expanded(
@@ -213,11 +224,7 @@ class DashboardPage extends StatelessWidget {
                         title: 'No te siguen',
                         value: '${state.nonFollowersCount}',
                         icon: Icons.person_remove_outlined,
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFFE1306C), Color(0xFF833AB4)],
-                        ),
+                        gradient: AppColors.cardGradient,
                         onTap: () => context.go('/non-followers', extra: bloc),
                       ),
                     ),
@@ -230,11 +237,7 @@ class DashboardPage extends StatelessWidget {
                         title: 'Fans',
                         value: '${state.fansCount}',
                         icon: Icons.favorite_outline,
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF00C853), Color(0xFF1DE9B6)],
-                        ),
+                        gradient: AppColors.cardGradient,
                         onTap: () => context.go('/fans', extra: bloc),
                       ),
                     ),
@@ -253,7 +256,6 @@ class DashboardPage extends StatelessWidget {
                         title: 'Mutuos',
                         value: '${state.mutualsCount}',
                         icon: Icons.people_outline,
-                        accentColor: AppColors.info,
                         onTap: () => context.go('/mutuals', extra: bloc),
                       ),
                     ),
@@ -266,7 +268,6 @@ class DashboardPage extends StatelessWidget {
                         title: 'Pendientes',
                         value: '${state.pendingRequestsCount}',
                         icon: Icons.hourglass_empty,
-                        accentColor: AppColors.warning,
                         subtitle: '+30 días',
                         onTap: () => context.go('/pending-requests', extra: bloc),
                       ),
@@ -294,7 +295,7 @@ class DashboardPage extends StatelessWidget {
                         onPressed: () => context.go('/top-interactions', extra: bloc),
                         child: Text(
                           'Ver todo',
-                          style: TextStyle(color: AppColors.info),
+                          style: TextStyle(color: AppColors.primary),
                         ),
                       ),
                     ],
@@ -331,7 +332,6 @@ class DashboardPage extends StatelessWidget {
                               .toSet() ?? {};
                           final isFollower = followerUsernames.contains(user.username.toLowerCase());
                           final isFollowing = followingUsernames.contains(user.username.toLowerCase());
-                          final details = state.interactionAnalytics!.userDetails[user.username];
                           
                           return InteractionProfileTile(
                             username: user.username,
@@ -341,7 +341,7 @@ class DashboardPage extends StatelessWidget {
                             totalScore: user.totalScore,
                             isFollower: isFollower,
                             isFollowing: isFollowing,
-                            onTap: () => _showInteractionDetail(context, user, details, isFollower, isFollowing),
+                            onTap: () => _showInteractionDetail(context, user, isFollower, isFollowing, state),
                           );
                         })
                         .toList(),
@@ -438,4 +438,3 @@ class DashboardPage extends StatelessWidget {
     );
   }
 }
-

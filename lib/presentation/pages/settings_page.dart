@@ -3,51 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_constants.dart';
-import '../../core/di/injection_container.dart';
 import '../../core/theme/app_theme.dart';
-import '../../domain/repositories/instagram_repository.dart';
+import '../../core/utils/data_utils.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
-
-  Future<void> _clearData(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          '¿Eliminar datos?',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-        ),
-        content: Text(
-          'Se eliminarán todos los datos importados. Tendrás que volver a importar tu archivo de Instagram.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-              ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && context.mounted) {
-      await sl<InstagramRepository>().clearData();
-      if (context.mounted) {
-        context.go('/export-guide');
-      }
-    }
-  }
 
   Future<void> _openUrl(String url) async {
     final uri = Uri.parse(url);
@@ -93,7 +53,6 @@ class SettingsPage extends StatelessWidget {
                 icon: Icons.refresh,
                 title: 'Actualizar datos',
                 subtitle: 'Importar un nuevo archivo',
-                color: AppColors.info,
                 onTap: () => context.go('/import'),
               ),
               _buildDivider(),
@@ -102,8 +61,8 @@ class SettingsPage extends StatelessWidget {
                 icon: Icons.delete_outline,
                 title: 'Eliminar datos',
                 subtitle: 'Borrar todos los datos importados',
-                color: AppColors.error,
-                onTap: () => _clearData(context),
+                isDestructive: true,
+                onTap: () => clearInstagramDataWithConfirmation(context),
               ),
             ],
           ),
@@ -128,7 +87,6 @@ class SettingsPage extends StatelessWidget {
                 icon: Icons.email_outlined,
                 title: 'Email',
                 subtitle: 'contacto@sergio-carrasco.com',
-                color: AppColors.primary,
                 trailing: const Icon(
                   Icons.open_in_new,
                   size: 16,
@@ -142,7 +100,6 @@ class SettingsPage extends StatelessWidget {
                 icon: Icons.link,
                 title: 'LinkedIn',
                 subtitle: 'Sergio Carrasco',
-                color: const Color(0xFF0A66C2),
                 trailing: const Icon(
                   Icons.open_in_new,
                   size: 16,
@@ -168,7 +125,7 @@ class SettingsPage extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.textSecondary.withValues(alpha: 0.15),
+                        color: AppColors.surfaceVariant,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -203,30 +160,17 @@ class SettingsPage extends StatelessWidget {
           Center(
             child: Column(
               children: [
-                ShaderMask(
-                  shaderCallback: (bounds) =>
-                      AppColors.instagramGradient.createShader(
-                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-                  ),
-                  child: Text(
-                    AppConstants.appName,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                  ),
+                Text(
+                  AppConstants.appName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Tu privacidad, tu control',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Hecho con ❤️ por Sergio Carrasco',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: AppColors.textTertiary,
                       ),
                 ),
@@ -244,18 +188,11 @@ class SettingsPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.success.withValues(alpha: 0.08),
-            AppColors.info.withValues(alpha: 0.05),
-          ],
-        ),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.success.withValues(alpha: 0.2),
-          width: 1,
+          color: AppColors.border,
+          width: 0.5,
         ),
       ),
       child: Column(
@@ -266,12 +203,12 @@ class SettingsPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: 0.15),
+                  color: AppColors.surfaceVariant,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.verified_user_outlined,
-                  color: AppColors.success,
+                  color: AppColors.primary,
                   size: 24,
                 ),
               ),
@@ -340,7 +277,7 @@ class SettingsPage extends StatelessWidget {
         Icon(
           icon,
           size: 18,
-          color: AppColors.success,
+          color: AppColors.textSecondary,
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -389,7 +326,7 @@ class SettingsPage extends StatelessWidget {
     required IconData icon,
     required String title,
     required String subtitle,
-    required Color color,
+    bool isDestructive = false,
     Widget? trailing,
     VoidCallback? onTap,
   }) {
@@ -405,10 +342,14 @@ class SettingsPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
+                  color: AppColors.surfaceVariant,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Icon(
+                  icon, 
+                  color: isDestructive ? AppColors.error : AppColors.textSecondary, 
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -419,6 +360,7 @@ class SettingsPage extends StatelessWidget {
                       title,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
+                            color: isDestructive ? AppColors.error : null,
                           ),
                     ),
                     const SizedBox(height: 2),

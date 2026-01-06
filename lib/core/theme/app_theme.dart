@@ -8,48 +8,49 @@ class AppColors {
   static const Color surfaceVariant = Color(0xFF1C1C1E);
   static const Color surfaceElevated = Color(0xFF262626);
 
-  // Instagram brand colors
-  static const Color primary = Color(0xFFE1306C);         // Instagram pink
-  static const Color secondary = Color(0xFF833AB4);       // Instagram purple
-  static const Color accent = Color(0xFFFD1D1D);          // Instagram red/orange
-  static const Color accentYellow = Color(0xFFF77737);    // Instagram orange
-  static const Color accentGold = Color(0xFFFCAF45);      // Instagram gold
+  // Primary accent - Instagram blue only
+  static const Color primary = Color(0xFF0095F6);           // Instagram blue
+  
+  // Keep these for backwards compatibility but use sparingly
+  static const Color secondary = Color(0xFF0095F6);         // Same as primary (blue)
+  static const Color accent = Color(0xFF0095F6);            // Same as primary (blue)
+  static const Color accentYellow = Color(0xFF0095F6);      // Same as primary (blue)
+  static const Color accentGold = Color(0xFF0095F6);        // Same as primary (blue)
 
-  // Status colors
-  static const Color success = Color(0xFF00C853);
-  static const Color warning = Color(0xFFFFB300);
-  static const Color error = Color(0xFFFF3B30);
-  static const Color info = Color(0xFF0095F6);            // Instagram blue
+  // Status colors - muted versions for subtle indication
+  static const Color success = Color(0xFF4CAF50);           // Muted green
+  static const Color warning = Color(0xFFFFA726);           // Muted orange
+  static const Color error = Color(0xFFEF5350);             // Muted red
+  static const Color info = Color(0xFF0095F6);              // Instagram blue
 
-  // Text colors
+  // Text colors - Instagram style grays
   static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFA8A8A8);
-  static const Color textTertiary = Color(0xFF6B6B6B);
+  static const Color textSecondary = Color(0xFF8E8E8E);     // Instagram gray
+  static const Color textTertiary = Color(0xFF555555);      // Darker gray
   static const Color textOnPrimary = Color(0xFFFFFFFF);
 
   // Border colors
   static const Color border = Color(0xFF262626);
   static const Color borderLight = Color(0xFF363636);
-  static const Color divider = Color(0xFF1C1C1E);
+  static const Color divider = Color(0xFF262626);
 
-  // Gradients
+  // Simple avatar border - gray instead of colorful gradient
+  static const Color avatarBorder = Color(0xFF363636);
+  
+  // Gradients - simplified, using the same subtle gray
   static const LinearGradient instagramGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFFFCAF45),  // Gold
-      Color(0xFFF77737),  // Orange
-      Color(0xFFFD1D1D),  // Red
-      Color(0xFFE1306C),  // Pink
-      Color(0xFFC13584),  // Magenta
-      Color(0xFF833AB4),  // Purple
+      Color(0xFF363636),
+      Color(0xFF262626),
     ],
   );
 
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [primary, secondary],
+    colors: [primary, primary],
   );
 
   static const LinearGradient cardGradient = LinearGradient(
@@ -87,7 +88,7 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
         onPrimary: AppColors.textOnPrimary,
-        secondary: AppColors.secondary,
+        secondary: AppColors.primary,
         onSecondary: AppColors.textOnPrimary,
         surface: AppColors.surface,
         onSurface: AppColors.textPrimary,
@@ -161,7 +162,7 @@ class AppTheme {
       // Text Buttons
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.info,
+          foregroundColor: AppColors.primary,
           textStyle: _sfPro(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
@@ -194,9 +195,9 @@ class AppTheme {
         space: 0.5,
       ),
 
-      // Icon
+      // Icon - use secondary gray by default
       iconTheme: const IconThemeData(
-        color: AppColors.textPrimary,
+        color: AppColors.textSecondary,
         size: 24,
       ),
 
@@ -296,4 +297,3 @@ class AppTheme {
     );
   }
 }
-

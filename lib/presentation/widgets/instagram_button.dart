@@ -22,20 +22,17 @@ class InstagramButton extends StatelessWidget {
     if (isOutlined) {
       return _buildOutlinedButton(context);
     }
-    return _buildGradientButton(context);
+    return _buildPrimaryButton(context);
   }
 
-  Widget _buildGradientButton(BuildContext context) {
+  Widget _buildPrimaryButton(BuildContext context) {
+    final isEnabled = onPressed != null && !isLoading;
+    
     return Container(
       width: double.infinity,
       height: 52,
       decoration: BoxDecoration(
-        gradient: onPressed != null && !isLoading
-            ? AppColors.instagramGradient
-            : null,
-        color: onPressed == null || isLoading
-            ? AppColors.surfaceVariant
-            : null,
+        color: isEnabled ? AppColors.primary : AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Material(
@@ -118,30 +115,3 @@ class InstagramButton extends StatelessWidget {
     );
   }
 }
-
-class InstagramGradientText extends StatelessWidget {
-  final String text;
-  final TextStyle? style;
-
-  const InstagramGradientText({
-    super.key,
-    required this.text,
-    this.style,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ShaderMask(
-      shaderCallback: (bounds) => AppColors.instagramGradient.createShader(
-        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-      ),
-      child: Text(
-        text,
-        style: (style ?? Theme.of(context).textTheme.headlineLarge)?.copyWith(
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-}
-

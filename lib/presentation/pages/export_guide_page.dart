@@ -92,25 +92,26 @@ class _ExportGuidePageState extends State<ExportGuidePage> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.primary.withValues(alpha: 0.15),
-                        AppColors.secondary.withValues(alpha: 0.1),
-                      ],
-                    ),
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.3),
+                      color: AppColors.border,
+                      width: 0.5,
                     ),
                   ),
                   child: Column(
                     children: [
-                      Icon(
-                        Icons.security,
-                        size: 40,
-                        color: AppColors.primary,
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceVariant,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.security,
+                          size: 28,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -157,7 +158,7 @@ class _ExportGuidePageState extends State<ExportGuidePage> {
                     children: [
                       Icon(
                         Icons.verified_user_outlined,
-                        color: AppColors.success,
+                        color: AppColors.primary,
                         size: 24,
                       ),
                       const SizedBox(width: 12),
@@ -238,19 +239,20 @@ class _GuideStep extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Number circle
+          // Number circle - simple gray/primary style
           Container(
             width: 36,
             height: 36,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: AppColors.instagramGradient,
+              color: AppColors.surfaceVariant,
+              border: Border.all(color: AppColors.border, width: 1),
             ),
             child: Center(
               child: Text(
                 '$number',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
                 ),

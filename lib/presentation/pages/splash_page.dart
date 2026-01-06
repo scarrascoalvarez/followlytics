@@ -110,7 +110,7 @@ class _SplashPageState extends State<SplashPage> {
                     ),
                     padding: const EdgeInsets.all(24),
                     child: Image.asset(
-                      'assets/images/logo-2.png',
+                      'assets/images/logo_with_background_transparent.png',
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -126,20 +126,14 @@ class _SplashPageState extends State<SplashPage> {
 
                 const SizedBox(height: 32),
 
-                // App name with gradient
-                ShaderMask(
-                  shaderCallback: (bounds) =>
-                      AppColors.instagramGradient.createShader(
-                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-                  ),
-                  child: Text(
-                    AppConstants.appName,
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -1,
-                        ),
-                  ),
+                // App name
+                Text(
+                  AppConstants.appName,
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: -1,
+                      ),
                 )
                     .animate()
                     .fadeIn(delay: 300.ms, duration: 500.ms)

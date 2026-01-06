@@ -26,27 +26,18 @@ class _OnboardingPageState extends State<OnboardingPage> {
       title: 'Analiza tu Instagram',
       description:
           'Descubre quién no te sigue de vuelta, tus fans más fieles, y con quién interactúas más.',
-      gradient: LinearGradient(
-        colors: [Color(0xFFE1306C), Color(0xFF833AB4)],
-      ),
     ),
     _OnboardingContent(
       icon: Icons.lock_outline,
       title: '100% Privado',
       description:
           'Tus datos nunca salen de tu dispositivo. Sin servidores, sin cuentas, sin rastreo. Solo tú tienes acceso.',
-      gradient: LinearGradient(
-        colors: [Color(0xFF00C853), Color(0xFF1DE9B6)],
-      ),
     ),
     _OnboardingContent(
       icon: Icons.download_outlined,
       title: 'Fácil de usar',
       description:
           'Exporta tus datos desde Instagram, impórtalos aquí y obtén insights instantáneos sobre tu cuenta.',
-      gradient: LinearGradient(
-        colors: [Color(0xFF0095F6), Color(0xFF00D4FF)],
-      ),
     ),
   ];
 
@@ -145,13 +136,11 @@ class _OnboardingContent extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
-  final Gradient gradient;
 
   const _OnboardingContent({
     required this.icon,
     required this.title,
     required this.description,
-    required this.gradient,
   });
 
   @override
@@ -161,18 +150,19 @@ class _OnboardingContent extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icon with gradient background
+          // Icon with sober gray background
           Container(
             width: 120,
             height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: gradient,
+              color: AppColors.surfaceVariant,
+              border: Border.all(color: AppColors.border, width: 2),
             ),
             child: Icon(
               icon,
               size: 56,
-              color: Colors.white,
+              color: AppColors.textSecondary,
             ),
           )
               .animate()
@@ -217,4 +207,3 @@ class _OnboardingContent extends StatelessWidget {
     );
   }
 }
-

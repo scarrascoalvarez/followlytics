@@ -43,20 +43,19 @@ class UserInteractionScore extends Equatable {
   final int likesCount;
   final int commentsCount;
   final int storyLikesCount;
-  final int dmCount;
 
   const UserInteractionScore({
     required this.username,
     this.likesCount = 0,
     this.commentsCount = 0,
     this.storyLikesCount = 0,
-    this.dmCount = 0,
   });
 
-  int get totalScore => likesCount + (commentsCount * 2) + storyLikesCount + dmCount;
+  /// Score based only on likes, comments, and story likes (no DMs)
+  int get totalScore => likesCount + (commentsCount * 2) + storyLikesCount;
 
   @override
-  List<Object?> get props => [username, likesCount, commentsCount, storyLikesCount, dmCount];
+  List<Object?> get props => [username, likesCount, commentsCount, storyLikesCount];
 }
 
 /// Detailed interaction data for a specific user
@@ -65,14 +64,12 @@ class UserInteractionDetails extends Equatable {
   final List<Comment> comments;
   final List<LikedContent> likedPosts;
   final List<StoryInteraction> storyInteractions;
-  final int dmCount;
 
   const UserInteractionDetails({
     required this.username,
     this.comments = const [],
     this.likedPosts = const [],
     this.storyInteractions = const [],
-    this.dmCount = 0,
   });
 
   /// Get all interactions sorted by date (most recent first)
@@ -108,14 +105,13 @@ class UserInteractionDetails extends Equatable {
   }
 
   @override
-  List<Object?> get props => [username, comments, likedPosts, storyInteractions, dmCount];
+  List<Object?> get props => [username, comments, likedPosts, storyInteractions];
 }
 
 enum InteractionType {
   like,
   comment,
   storyLike,
-  dm,
 }
 
 class InteractionItem extends Equatable {
@@ -132,4 +128,3 @@ class InteractionItem extends Equatable {
   @override
   List<Object?> get props => [type, timestamp, description];
 }
-

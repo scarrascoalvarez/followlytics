@@ -6,7 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../domain/entities/entities.dart';
 import '../blocs/analytics/analytics_bloc.dart';
 import '../widgets/profile_tile.dart';
-import '../widgets/profile_detail_sheet.dart';
+import '../widgets/unified_profile_sheet.dart';
 import '../widgets/time_filter.dart';
 
 class TopInteractionsPage extends StatefulWidget {
@@ -81,18 +81,11 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
       }
     }
 
-    // Build DM counts map
-    final dmCounts = <String, int>{};
-    for (final dm in data.dmConversations) {
-      dmCounts[dm.username] = dm.messageCount;
-    }
-
-    // Get all users and calculate combined scores
+    // Get all users from likes, comments, and story likes only (NO DMs)
     final allUsers = <String>{
       ...likeCounts.keys,
       ...commentCounts.keys,
       ...storyLikeCounts.keys,
-      ...dmCounts.keys,
     };
 
     final combinedScores = allUsers.map((username) {
@@ -101,7 +94,6 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
         likesCount: likeCounts[username] ?? 0,
         commentsCount: commentCounts[username] ?? 0,
         storyLikesCount: storyLikeCounts[username] ?? 0,
-        dmCount: dmCounts[username] ?? 0,
       );
     }).toList();
 
@@ -120,7 +112,6 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
       userDetails[username] = UserInteractionDetails(
         username: username,
         comments: comments,
-        dmCount: dmCounts[username] ?? 0,
         likedPosts: likes,
         storyInteractions: stories,
       );
@@ -331,7 +322,6 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
             followerUsernames.contains(user.username.toLowerCase());
         final isFollowing =
             followingUsernames.contains(user.username.toLowerCase());
-        final details = userDetails[user.username];
 
         return InteractionProfileTile(
           username: user.username,
@@ -341,7 +331,7 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
           totalScore: user.totalScore,
           isFollower: isFollower,
           isFollowing: isFollowing,
-          onTap: () => _showDetail(user, details, isFollower, isFollowing),
+          onTap: () => _showDetail(user, isFollower, isFollowing, userDetails[user.username]),
         );
       },
     );
@@ -349,16 +339,34 @@ class _TopInteractionsPageState extends State<TopInteractionsPage>
 
   void _showDetail(
     UserInteractionScore user,
-    UserInteractionDetails? details,
     bool isFollower,
     bool isFollowing,
+    UserInteractionDetails? details,
   ) {
-    showInteractionDetailSheet(
+    // Buscar timestamp en followers/following para mostrar fecha en el detalle
+    final state = context.read<AnalyticsBloc>().state;
+    DateTime? timestamp;
+    
+    if (isFollower) {
+      final follower = state.instagramData?.followers
+          .where((p) => p.username.toLowerCase() == user.username.toLowerCase())
+          .firstOrNull;
+      timestamp = follower?.timestamp;
+    }
+    if (timestamp == null && isFollowing) {
+      final following = state.instagramData?.following
+          .where((p) => p.username.toLowerCase() == user.username.toLowerCase())
+          .firstOrNull;
+      timestamp = following?.timestamp;
+    }
+
+    showUnifiedProfileSheetFromInteraction(
       context,
       user: user,
-      details: details,
       isFollower: isFollower,
       isFollowing: isFollowing,
+      timestamp: timestamp,
+      details: details,
     );
   }
 }
